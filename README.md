@@ -1,53 +1,55 @@
 # FastMCP
 
-A TypeScript framework for building [MCP](https://glama.ai/mcp) servers capable of handling client sessions.
+FastMCPは、クライアントセッション管理が可能な[MCP](https://glama.ai/mcp)サーバーを構築するためのTypeScriptフレームワークです。
 
 > [!NOTE]
 >
-> For a Python implementation, see [FastMCP](https://github.com/jlowin/fastmcp).
+> Python実装版は[FastMCP Python](https://github.com/jlowin/fastmcp)をご覧ください。
 
-## Features
+## 主な機能
 
-- Simple Tool, Resource, Prompt definition
-- [Authentication](#authentication)
-- [Sessions](#sessions)
-- [Image content](#returning-an-image)
-- [Logging](#logging)
-- [Error handling](#errors)
-- [SSE](#sse)
-- CORS (enabled by default)
-- [Progress notifications](#progress)
-- [Typed server events](#typed-server-events)
-- [Prompt argument auto-completion](#prompt-argument-auto-completion)
-- [Sampling](#requestsampling)
-- Automated SSE pings
-- Roots
-- CLI for [testing](#test-with-mcp-cli) and [debugging](#inspect-with-mcp-inspector)
+FastMCPは以下の機能を提供します：
 
-## Installation
+- シンプルなツール、リソース、プロンプト定義
+- [認証機能](#認証)
+- [セッション管理](#セッション)
+- [画像コンテンツ対応](#画像の返却)
+- [ロギング](#ロギング)
+- [エラーハンドリング](#エラー)
+- [SSE(Server-Sent Events)](#sse)
+- CORS（デフォルトで有効）
+- [進捗通知](#進捗通知)
+- [型付きサーバーイベント](#型付きサーバーイベント)
+- [プロンプト引数の自動補完](#プロンプト引数の自動補完)
+- [サンプリングリクエスト](#サンプリングリクエスト)
+- 自動SSEピング
+- ルート管理
+- [テスト](#mcp-cliでテスト)や[デバッグ](#mcp-inspectorで検査)のためのCLI
+
+## インストール方法
 
 ```bash
 npm install fastmcp
 ```
 
-## Quickstart
+## クイックスタート
 
 > [!NOTE]
 >
-> There are many real-world examples of using FastMCP in the wild. See the [Showcase](#showcase) for examples.
+> FastMCPの実際の使用例は多数あります。[事例紹介](#事例紹介)をご覧ください。
 
 ```ts
 import { FastMCP } from "fastmcp";
-import { z } from "zod"; // Or any validation library that supports Standard Schema
+import { z } from "zod"; // または他の検証ライブラリ（Standard Schemaをサポートしているもの）
 
 const server = new FastMCP({
-  name: "My Server",
+  name: "マイサーバー",
   version: "1.0.0",
 });
 
 server.addTool({
   name: "add",
-  description: "Add two numbers",
+  description: "2つの数値を足し算します",
   parameters: z.object({
     a: z.number(),
     b: z.number(),
@@ -62,9 +64,9 @@ server.start({
 });
 ```
 
-_That's it!_ You have a working MCP server.
+これだけで動作するMCPサーバーができました！
 
-You can test the server in terminal with:
+ターミナルで以下のようにテストできます：
 
 ```bash
 git clone https://github.com/punkpeye/fastmcp.git
@@ -73,17 +75,17 @@ cd fastmcp
 pnpm install
 pnpm build
 
-# Test the addition server example using CLI:
+# CLIを使った足し算サーバーの例をテスト：
 npx fastmcp dev src/examples/addition.ts
-# Test the addition server example using MCP Inspector:
+# MCP Inspectorを使った足し算サーバーの例を検査：
 npx fastmcp inspect src/examples/addition.ts
 ```
 
 ### SSE
 
-[Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) (SSE) provide a mechanism for servers to send real-time updates to clients over an HTTPS connection. In the context of MCP, SSE is primarily used to enable remote MCP communication, allowing an MCP hosted on a remote machine to be accessed and relay updates over the network.
+[Server-Sent Events](https://developer.mozilla.org/ja/docs/Web/API/Server-sent_events)（SSE）は、サーバーがHTTPS接続を介してクライアントにリアルタイム更新を送信するメカニズムです。MCPにおいて、SSEは主にリモートMCP通信を可能にするために使用され、リモートマシンでホストされたMCPにアクセスしてネットワーク経由で更新を中継できるようにします。
 
-You can also run the server with SSE support:
+SSEサポート付きでサーバーを実行することもできます：
 
 ```ts
 server.start({
@@ -95,9 +97,9 @@ server.start({
 });
 ```
 
-This will start the server and listen for SSE connections on `http://localhost:8080/sse`.
+これにより、サーバーが起動し、`http://localhost:8080/sse`でSSE接続をリッスンします。
 
-You can then use `SSEClientTransport` to connect to the server:
+その後、`SSEClientTransport`を使用してサーバーに接続できます：
 
 ```ts
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
@@ -117,22 +119,22 @@ const transport = new SSEClientTransport(new URL(`http://localhost:8080/sse`));
 await client.connect(transport);
 ```
 
-## Core Concepts
+## 基本概念
 
-### Tools
+### ツール
 
-[Tools](https://modelcontextprotocol.io/docs/concepts/tools) in MCP allow servers to expose executable functions that can be invoked by clients and used by LLMs to perform actions.
+MCPの[ツール](https://modelcontextprotocol.io/docs/concepts/tools)では、サーバーが実行可能な関数を公開し、クライアントやLLMがアクションを実行するために呼び出すことができます。
 
-FastMCP uses the [Standard Schema](https://standardschema.dev) specification for defining tool parameters. This allows you to use your preferred schema validation library (like Zod, ArkType, or Valibot) as long as it implements the spec.
+FastMCPはツールパラメーターの定義に[Standard Schema](https://standardschema.dev)仕様を使用しています。これにより、Zod、ArkType、Valibotなど、仕様を実装している好みのスキーマ検証ライブラリを使用できます。
 
-**Zod Example:**
+**Zodの例：**
 
 ```typescript
 import { z } from "zod";
 
 server.addTool({
   name: "fetch-zod",
-  description: "Fetch the content of a url (using Zod)",
+  description: "URLのコンテンツを取得します（Zodを使用）",
   parameters: z.object({
     url: z.string(),
   }),
@@ -142,14 +144,14 @@ server.addTool({
 });
 ```
 
-**ArkType Example:**
+**ArkTypeの例：**
 
 ```typescript
 import { type } from "arktype";
 
 server.addTool({
   name: "fetch-arktype",
-  description: "Fetch the content of a url (using ArkType)",
+  description: "URLのコンテンツを取得します（ArkTypeを使用）",
   parameters: type({
     url: "string",
   }),
@@ -159,16 +161,16 @@ server.addTool({
 });
 ```
 
-**Valibot Example:**
+**Valibotの例：**
 
-Valibot requires the peer dependency @valibot/to-json-schema.
+Valibotにはピア依存関係@valibot/to-json-schemaが必要です。
 
 ```typescript
 import * as v from "valibot";
 
 server.addTool({
   name: "fetch-valibot",
-  description: "Fetch the content of a url (using Valibot)",
+  description: "URLのコンテンツを取得します（Valibotを使用）",
   parameters: v.object({
     url: v.string(),
   }),
@@ -178,29 +180,29 @@ server.addTool({
 });
 ```
 
-#### Returning a string
+#### 文字列を返す
 
-`execute` can return a string:
+`execute`は文字列を返すことができます：
 
 ```js
 server.addTool({
   name: "download",
-  description: "Download a file",
+  description: "ファイルをダウンロードします",
   parameters: z.object({
     url: z.string(),
   }),
   execute: async (args) => {
-    return "Hello, world!";
+    return "こんにちは、世界！";
   },
 });
 ```
 
-The latter is equivalent to:
+これは以下と同等です：
 
 ```js
 server.addTool({
   name: "download",
-  description: "Download a file",
+  description: "ファイルをダウンロードします",
   parameters: z.object({
     url: z.string(),
   }),
@@ -209,7 +211,7 @@ server.addTool({
       content: [
         {
           type: "text",
-          text: "Hello, world!",
+          text: "こんにちは、世界！",
         },
       ],
     };
@@ -217,38 +219,38 @@ server.addTool({
 });
 ```
 
-#### Returning a list
+#### リストを返す
 
-If you want to return a list of messages, you can return an object with a `content` property:
+メッセージのリストを返したい場合は、`content`プロパティを持つオブジェクトを返せます：
 
 ```js
 server.addTool({
   name: "download",
-  description: "Download a file",
+  description: "ファイルをダウンロードします",
   parameters: z.object({
     url: z.string(),
   }),
   execute: async (args) => {
     return {
       content: [
-        { type: "text", text: "First message" },
-        { type: "text", text: "Second message" },
+        { type: "text", text: "1つ目のメッセージ" },
+        { type: "text", text: "2つ目のメッセージ" },
       ],
     };
   },
 });
 ```
 
-#### Returning an image
+#### 画像の返却
 
-Use the `imageContent` to create a content object for an image:
+画像のコンテンツオブジェクトを作成するには、`imageContent`を使用します：
 
 ```js
 import { imageContent } from "fastmcp";
 
 server.addTool({
   name: "download",
-  description: "Download a file",
+  description: "ファイルをダウンロードします",
   parameters: z.object({
     url: z.string(),
   }),
@@ -257,17 +259,17 @@ server.addTool({
       url: "https://example.com/image.png",
     });
 
-    // or...
+    // または...
     // return imageContent({
     //   path: "/path/to/image.png",
     // });
 
-    // or...
+    // または...
     // return imageContent({
     //   buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "base64"),
     // });
 
-    // or...
+    // または...
     // return {
     //   content: [
     //     await imageContent(...)
@@ -277,20 +279,20 @@ server.addTool({
 });
 ```
 
-The `imageContent` function takes the following options:
+`imageContent`関数は以下のオプションを受け取ります：
 
-- `url`: The URL of the image.
-- `path`: The path to the image file.
-- `buffer`: The image data as a buffer.
+- `url`: 画像のURL
+- `path`: 画像ファイルへのパス
+- `buffer`: バッファとしての画像データ
 
-Only one of `url`, `path`, or `buffer` must be specified.
+`url`、`path`、`buffer`のいずれか1つのみを指定する必要があります。
 
-The above example is equivalent to:
+上の例は以下と同等です：
 
 ```js
 server.addTool({
   name: "download",
-  description: "Download a file",
+  description: "ファイルをダウンロードします",
   parameters: z.object({
     url: z.string(),
   }),
@@ -308,69 +310,69 @@ server.addTool({
 });
 ```
 
-#### Logging
+#### ロギング
 
-Tools can log messages to the client using the `log` object in the context object:
+ツールはコンテキストオブジェクトの`log`を使用してクライアントにメッセージをログ出力できます：
 
 ```js
 server.addTool({
   name: "download",
-  description: "Download a file",
+  description: "ファイルをダウンロードします",
   parameters: z.object({
     url: z.string(),
   }),
   execute: async (args, { log }) => {
-    log.info("Downloading file...", {
-      url,
+    log.info("ファイルをダウンロード中...", {
+      url: args.url,
     });
 
     // ...
 
-    log.info("Downloaded file");
+    log.info("ファイルをダウンロードしました");
 
-    return "done";
+    return "完了";
   },
 });
 ```
 
-The `log` object has the following methods:
+`log`オブジェクトには以下のメソッドがあります：
 
 - `debug(message: string, data?: SerializableValue)`
 - `error(message: string, data?: SerializableValue)`
 - `info(message: string, data?: SerializableValue)`
 - `warn(message: string, data?: SerializableValue)`
 
-#### Errors
+#### エラー
 
-The errors that are meant to be shown to the user should be thrown as `UserError` instances:
+ユーザーに表示されるべきエラーは、`UserError`インスタンスとしてスローする必要があります：
 
 ```js
 import { UserError } from "fastmcp";
 
 server.addTool({
   name: "download",
-  description: "Download a file",
+  description: "ファイルをダウンロードします",
   parameters: z.object({
     url: z.string(),
   }),
   execute: async (args) => {
     if (args.url.startsWith("https://example.com")) {
-      throw new UserError("This URL is not allowed");
+      throw new UserError("このURLは許可されていません");
     }
 
-    return "done";
+    return "完了";
   },
 });
 ```
 
-#### Progress
+#### 進捗通知
 
-Tools can report progress by calling `reportProgress` in the context object:
+ツールはコンテキストオブジェクトの`reportProgress`を呼び出すことで進捗を報告できます：
 
 ```js
 server.addTool({
   name: "download",
-  description: "Download a file",
+  description: "ファイルをダウンロードします",
   parameters: z.object({
     url: z.string(),
   }),
@@ -387,26 +389,26 @@ server.addTool({
       total: 100,
     });
 
-    return "done";
+    return "完了";
   },
 });
 ```
 
-### Resources
+### リソース
 
-[Resources](https://modelcontextprotocol.io/docs/concepts/resources) represent any kind of data that an MCP server wants to make available to clients. This can include:
+[リソース](https://modelcontextprotocol.io/docs/concepts/resources)は、MCPサーバーがクライアントに提供したいあらゆる種類のデータを表します。これには以下が含まれます：
 
-- File contents
-- Screenshots and images
-- Log files
-- And more
+- ファイルの内容
+- スクリーンショットや画像
+- ログファイル
+- その他多数
 
-Each resource is identified by a unique URI and can contain either text or binary data.
+各リソースは一意のURIで識別され、テキストまたはバイナリデータを含むことができます。
 
 ```ts
 server.addResource({
   uri: "file:///logs/app.log",
-  name: "Application Logs",
+  name: "アプリケーションログ",
   mimeType: "text/plain",
   async load() {
     return {
@@ -418,73 +420,73 @@ server.addResource({
 
 > [!NOTE]
 >
-> `load` can return multiple resources. This could be used, for example, to return a list of files inside a directory when the directory is read.
+> `load`は複数のリソースを返すことができます。これは例えば、ディレクトリが読み込まれたときにディレクトリ内のファイルのリストを返すために使用できます。
 >
 > ```ts
 > async load() {
 >   return [
 >     {
->       text: "First file content",
+>       text: "1つ目のファイルの内容",
 >     },
 >     {
->       text: "Second file content",
+>       text: "2つ目のファイルの内容",
 >     },
 >   ];
 > }
 > ```
 
-You can also return binary contents in `load`:
+`load`でバイナリコンテンツを返すこともできます：
 
 ```ts
 async load() {
   return {
-    blob: 'base64-encoded-data'
+    blob: 'base64でエンコードされたデータ'
   };
 }
 ```
 
-### Resource templates
+### リソーステンプレート
 
-You can also define resource templates:
+リソーステンプレートを定義することもできます：
 
 ```ts
 server.addResourceTemplate({
   uriTemplate: "file:///logs/{name}.log",
-  name: "Application Logs",
+  name: "アプリケーションログ",
   mimeType: "text/plain",
   arguments: [
     {
       name: "name",
-      description: "Name of the log",
+      description: "ログの名前",
       required: true,
     },
   ],
   async load({ name }) {
     return {
-      text: `Example log content for ${name}`,
+      text: `${name}のサンプルログ内容`,
     };
   },
 });
 ```
 
-#### Resource template argument auto-completion
+#### リソーステンプレート引数の自動補完
 
-Provide `complete` functions for resource template arguments to enable automatic completion:
+リソーステンプレート引数の自動補完を有効にするために、`complete`関数を提供します：
 
 ```ts
 server.addResourceTemplate({
   uriTemplate: "file:///logs/{name}.log",
-  name: "Application Logs",
+  name: "アプリケーションログ",
   mimeType: "text/plain",
   arguments: [
     {
       name: "name",
-      description: "Name of the log",
+      description: "ログの名前",
       required: true,
       complete: async (value) => {
-        if (value === "Example") {
+        if (value === "サンプル") {
           return {
-            values: ["Example Log"],
+            values: ["サンプルログ"],
           };
         }
 
@@ -496,53 +498,53 @@ server.addResourceTemplate({
   ],
   async load({ name }) {
     return {
-      text: `Example log content for ${name}`,
+      text: `${name}のサンプルログ内容`,
     };
   },
 });
 ```
 
-### Prompts
+### プロンプト
 
-[Prompts](https://modelcontextprotocol.io/docs/concepts/prompts) enable servers to define reusable prompt templates and workflows that clients can easily surface to users and LLMs. They provide a powerful way to standardize and share common LLM interactions.
+[プロンプト](https://modelcontextprotocol.io/docs/concepts/prompts)は、サーバーが再利用可能なプロンプトテンプレートとワークフローを定義し、クライアントがユーザーやLLMに簡単に提示できるようにします。これにより、一般的なLLMインタラクションを標準化して共有するための強力な方法を提供します。
 
 ```ts
 server.addPrompt({
   name: "git-commit",
-  description: "Generate a Git commit message",
+  description: "Gitコミットメッセージを生成します",
   arguments: [
     {
       name: "changes",
-      description: "Git diff or description of changes",
+      description: "Gitの差分または変更の説明",
       required: true,
     },
   ],
   load: async (args) => {
-    return `Generate a concise but descriptive commit message for these changes:\n\n${args.changes}`;
+    return `これらの変更に対する簡潔かつ説明的なコミットメッセージを生成してください：\n\n${args.changes}`;
   },
 });
 ```
 
-#### Prompt argument auto-completion
+#### プロンプト引数の自動補完
 
-Prompts can provide auto-completion for their arguments:
+プロンプトは引数の自動補完を提供できます：
 
 ```js
 server.addPrompt({
   name: "countryPoem",
-  description: "Writes a poem about a country",
+  description: "国についての詩を書きます",
   load: async ({ name }) => {
-    return `Hello, ${name}!`;
+    return `こんにちは、${name}さん！`;
   },
   arguments: [
     {
       name: "name",
-      description: "Name of the country",
+      description: "国の名前",
       required: true,
       complete: async (value) => {
-        if (value === "Germ") {
+        if (value === "日") {
           return {
-            values: ["Germany"],
+            values: ["日本"],
           };
         }
 
@@ -555,37 +557,37 @@ server.addPrompt({
 });
 ```
 
-#### Prompt argument auto-completion using `enum`
+#### `enum`を使用したプロンプト引数の自動補完
 
-If you provide an `enum` array for an argument, the server will automatically provide completions for the argument.
+引数に`enum`配列を提供すると、サーバーは自動的に引数の補完を提供します。
 
 ```js
 server.addPrompt({
   name: "countryPoem",
-  description: "Writes a poem about a country",
+  description: "国についての詩を書きます",
   load: async ({ name }) => {
-    return `Hello, ${name}!`;
+    return `こんにちは、${name}さん！`;
   },
   arguments: [
     {
       name: "name",
-      description: "Name of the country",
+      description: "国の名前",
       required: true,
-      enum: ["Germany", "France", "Italy"],
+      enum: ["日本", "フランス", "イタリア"],
     },
   ],
 });
 ```
 
-### Authentication
+### 認証
 
-FastMCP allows you to `authenticate` clients using a custom function:
+FastMCPではカスタム関数を使用してクライアントを`authenticate`できます：
 
 ```ts
 import { AuthError } from "fastmcp";
 
 const server = new FastMCP({
-  name: "My Server",
+  name: "マイサーバー",
   version: "1.0.0",
   authenticate: ({request}) => {
     const apiKey = request.headers["x-api-key"];
@@ -597,7 +599,7 @@ const server = new FastMCP({
       });
     }
 
-    // Whatever you return here will be accessible in the `context.session` object.
+    // ここで返すものは`context.session`オブジェクトでアクセスできます
     return {
       id: 1,
     }
@@ -605,50 +607,50 @@ const server = new FastMCP({
 });
 ```
 
-Now you can access the authenticated session data in your tools:
+これで、ツール内で認証されたセッションデータにアクセスできます：
 
 ```ts
 server.addTool({
   name: "sayHello",
   execute: async (args, { session }) => {
-    return `Hello, ${session.id}!`;
+    return `こんにちは、${session.id}さん！`;
   },
 });
 ```
 
-### Sessions
+### セッション
 
-The `session` object is an instance of `FastMCPSession` and it describes active client sessions.
+`session`オブジェクトは`FastMCPSession`のインスタンスであり、アクティブなクライアントセッションを記述します。
 
 ```ts
 server.sessions;
 ```
 
-We allocate a new server instance for each client connection to enable 1:1 communication between a client and the server.
+クライアントとサーバー間の1対1通信を可能にするために、各クライアント接続に対して新しいサーバーインスタンスを割り当てます。
 
-### Typed server events
+### 型付きサーバーイベント
 
-You can listen to events emitted by the server using the `on` method:
+`on`メソッドを使用してサーバーから発行されるイベントをリッスンできます：
 
 ```ts
 server.on("connect", (event) => {
-  console.log("Client connected:", event.session);
+  console.log("クライアント接続:", event.session);
 });
 
 server.on("disconnect", (event) => {
-  console.log("Client disconnected:", event.session);
+  console.log("クライアント切断:", event.session);
 });
 ```
 
 ## `FastMCPSession`
 
-`FastMCPSession` represents a client session and provides methods to interact with the client.
+`FastMCPSession`はクライアントセッションを表し、クライアントとやり取りするためのメソッドを提供します。
 
-Refer to [Sessions](#sessions) for examples of how to obtain a `FastMCPSession` instance.
+`FastMCPSession`インスタンスの取得方法については、[セッション](#セッション)の例を参照してください。
 
 ### `requestSampling`
 
-`requestSampling` creates a [sampling](https://modelcontextprotocol.io/docs/concepts/sampling) request and returns the response.
+`requestSampling`は[サンプリング](https://modelcontextprotocol.io/docs/concepts/sampling)リクエストを作成し、レスポンスを返します。
 
 ```ts
 await session.requestSampling({
@@ -657,11 +659,11 @@ await session.requestSampling({
       role: "user",
       content: {
         type: "text",
-        text: "What files are in the current directory?",
+        text: "現在のディレクトリにはどのファイルがありますか？",
       },
     },
   ],
-  systemPrompt: "You are a helpful file system assistant.",
+  systemPrompt: "あなたは役立つファイルシステムアシスタントです。",
   includeContext: "thisServer",
   maxTokens: 100,
 });
@@ -669,7 +671,7 @@ await session.requestSampling({
 
 ### `clientCapabilities`
 
-The `clientCapabilities` property contains the client capabilities.
+`clientCapabilities`プロパティにはクライアント機能が含まれています。
 
 ```ts
 session.clientCapabilities;
@@ -677,7 +679,7 @@ session.clientCapabilities;
 
 ### `loggingLevel`
 
-The `loggingLevel` property describes the logging level as set by the client.
+`loggingLevel`プロパティは、クライアントによって設定されたロギングレベルを記述します。
 
 ```ts
 session.loggingLevel;
@@ -685,7 +687,7 @@ session.loggingLevel;
 
 ### `roots`
 
-The `roots` property contains the roots as set by the client.
+`roots`プロパティには、クライアントによって設定されたルートが含まれています。
 
 ```ts
 session.roots;
@@ -693,52 +695,52 @@ session.roots;
 
 ### `server`
 
-The `server` property contains an instance of MCP server that is associated with the session.
+`server`プロパティには、セッションに関連付けられたMCPサーバーのインスタンスが含まれています。
 
 ```ts
 session.server;
 ```
 
-### Typed session events
+### 型付きセッションイベント
 
-You can listen to events emitted by the session using the `on` method:
+`on`メソッドを使用してセッションから発行されるイベントをリッスンできます：
 
 ```ts
 session.on("rootsChanged", (event) => {
-  console.log("Roots changed:", event.roots);
+  console.log("ルート変更:", event.roots);
 });
 
 session.on("error", (event) => {
-  console.error("Error:", event.error);
+  console.error("エラー:", event.error);
 });
 ```
 
-## Running Your Server
+## サーバーの実行
 
-### Test with `mcp-cli`
+### MCP-CLIでテスト
 
-The fastest way to test and debug your server is with `fastmcp dev`:
+サーバーをテストしてデバッグする最速の方法は、`fastmcp dev`を使用することです：
 
 ```bash
 npx fastmcp dev server.js
 npx fastmcp dev server.ts
 ```
 
-This will run your server with [`mcp-cli`](https://github.com/wong2/mcp-cli) for testing and debugging your MCP server in the terminal.
+これにより、[`mcp-cli`](https://github.com/wong2/mcp-cli)を使用してターミナルでMCPサーバーをテストおよびデバッグするためのサーバーが実行されます。
 
-### Inspect with `MCP Inspector`
+### MCP Inspectorで検査
 
-Another way is to use the official [`MCP Inspector`](https://modelcontextprotocol.io/docs/tools/inspector) to inspect your server with a Web UI:
+もう一つの方法は、公式の[`MCP Inspector`](https://modelcontextprotocol.io/docs/tools/inspector)を使用してWebUIでサーバーを検査することです：
 
 ```bash
 npx fastmcp inspect server.ts
 ```
 
-## FAQ
+## よくある質問
 
-### How to use with Claude Desktop?
+### Claude Desktopで使用するには？
 
-Follow the guide https://modelcontextprotocol.io/quickstart/user and add the following configuration:
+ガイド https://modelcontextprotocol.io/quickstart/user に従って、次の設定を追加してください：
 
 ```json
 {
@@ -747,32 +749,32 @@ Follow the guide https://modelcontextprotocol.io/quickstart/user and add the fol
       "command": "npx",
       "args": [
         "tsx",
-        "/PATH/TO/YOUR_PROJECT/src/index.ts"
+        "/プロジェクトへのパス/src/index.ts"
       ],
       "env": {
-        "YOUR_ENV_VAR": "value"
+        "環境変数名": "値"
       }
     }
   }
 }
 ```
 
-## Showcase
+## 事例紹介
 
 > [!NOTE]
 >
-> If you've developed a server using FastMCP, please [submit a PR](https://github.com/punkpeye/fastmcp) to showcase it here!
+> FastMCPを使用したサーバーを開発した場合は、ぜひ[PR提出](https://github.com/punkpeye/fastmcp)して事例として紹介してください！
 
-- [apinetwork/piapi-mcp-server](https://github.com/apinetwork/piapi-mcp-server) - generate media using Midjourney/Flux/Kling/LumaLabs/Udio/Chrip/Trellis
-- [domdomegg/computer-use-mcp](https://github.com/domdomegg/computer-use-mcp) - controls your computer
-- [LiterallyBlah/Dradis-MCP](https://github.com/LiterallyBlah/Dradis-MCP) – manages projects and vulnerabilities in Dradis
-- [Meeting-Baas/meeting-mcp](https://github.com/Meeting-Baas/meeting-mcp) - create meeting bots, search transcripts, and manage recording data
-- [drumnation/unsplash-smart-mcp-server](https://github.com/drumnation/unsplash-smart-mcp-server) – enables AI agents to seamlessly search, recommend, and deliver professional stock photos from Unsplash
-- [ssmanji89/halopsa-workflows-mcp](https://github.com/ssmanji89/halopsa-workflows-mcp) - HaloPSA Workflows integration with AI assistants
-- [aiamblichus/mcp-chat-adapter](https://github.com/aiamblichus/mcp-chat-adapter) – provides a clean interface for LLMs to use chat completion
+- [apinetwork/piapi-mcp-server](https://github.com/apinetwork/piapi-mcp-server) - Midjourney/Flux/Kling/LumaLabs/Udio/Chrip/Trellisを使用してメディアを生成
+- [domdomegg/computer-use-mcp](https://github.com/domdomegg/computer-use-mcp) - コンピュータを制御
+- [LiterallyBlah/Dradis-MCP](https://github.com/LiterallyBlah/Dradis-MCP) – Dradisでプロジェクトと脆弱性を管理
+- [Meeting-Baas/meeting-mcp](https://github.com/Meeting-Baas/meeting-mcp) - 会議ボットの作成、議事録の検索、録画データの管理
+- [drumnation/unsplash-smart-mcp-server](https://github.com/drumnation/unsplash-smart-mcp-server) – AIエージェントがUnsplashからプロの写真をシームレスに検索、推奨、配信できるようにする
+- [ssmanji89/halopsa-workflows-mcp](https://github.com/ssmanji89/halopsa-workflows-mcp) - HaloPSAワークフローとAIアシスタントの統合
+- [aiamblichus/mcp-chat-adapter](https://github.com/aiamblichus/mcp-chat-adapter) – LLMがチャット完了を使用するためのクリーンなインターフェースを提供
 
-## Acknowledgements
+## 謝辞
 
-- FastMCP is inspired by the [Python implementation](https://github.com/jlowin/fastmcp) by [Jonathan Lowin](https://github.com/jlowin).
-- Parts of codebase were adopted from [LiteMCP](https://github.com/wong2/litemcp).
-- Parts of codebase were adopted from [Model Context protocolでSSEをやってみる](https://dev.classmethod.jp/articles/mcp-sse/).
+- FastMCPは[Jonathan Lowin](https://github.com/jlowin)による[Python実装](https://github.com/jlowin/fastmcp)に着想を得ています。
+- コードベースの一部は[LiteMCP](https://github.com/wong2/litemcp)から採用されました。
+- コードベースの一部は[Model Context protocolでSSEをやってみる](https://dev.classmethod.jp/articles/mcp-sse/)から採用されました。

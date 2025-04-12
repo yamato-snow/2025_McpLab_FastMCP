@@ -1,3 +1,17 @@
+/**
+ * FastMCP - Model Context Protocol (MCP)のTypeScript実装
+ * 
+ * このファイルはMCPサーバーを実装するためのメインクラスとユーティリティを提供します。
+ * MCPはAIアシスタントがローカルリソースやツールにアクセスするための標準プロトコルです。
+ * 
+ * 主な機能:
+ * - ツール呼び出し（AIモデルがローカル関数を実行できる）
+ * - リソースアクセス（AIモデルがファイルなどのリソースを読み取れる）
+ * - プロンプトテンプレート（共通のプロンプトパターンを定義できる）
+ * - セッション管理（複数クライアントとの接続を管理）
+ * 
+ * @see https://modelcontextprotocol.io/
+ */
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -50,7 +64,8 @@ type FastMCPSessionEvents = {
 };
 
 /**
- * Generates an image content object from a URL, file path, or buffer.
+ * 画像コンテンツオブジェクトを生成するユーティリティ関数
+ * URLやファイルパス、バッファからBase64エンコードされた画像データを作成します
  */
 export const imageContent = async (
   input: { url: string } | { path: string } | { buffer: Buffer },
@@ -86,6 +101,10 @@ export const imageContent = async (
   } as const;
 };
 
+/**
+ * エラーの基底クラス
+ * すべてのカスタムエラーはこのクラスを継承します
+ */
 abstract class FastMCPError extends Error {
   public constructor(message?: string) {
     super(message);
@@ -97,6 +116,10 @@ type Extra = unknown;
 
 type Extras = Record<string, Extra>;
 
+/**
+ * 予期しない状態エラー
+ * 内部的な問題が発生した場合に使用されます
+ */
 export class UnexpectedStateError extends FastMCPError {
   public extras?: Extras;
 
@@ -108,7 +131,8 @@ export class UnexpectedStateError extends FastMCPError {
 }
 
 /**
- * An error that is meant to be surfaced to the user.
+ * ユーザーに表示するためのエラー
+ * 意図的にユーザーに伝えるべきエラーメッセージを定義します
  */
 export class UserError extends UnexpectedStateError {}
 
@@ -366,11 +390,15 @@ type SamplingResponse = {
   model: string;
   stopReason?: "endTurn" | "stopSequence" | "maxTokens" | string;
   role: "user" | "assistant";
-  content: TextContent | ImageContent;
+  content: TextContent | ImageContent | { type: "audio"; data: string; mimeType: string };
 };
 
 type FastMCPSessionAuth = Record<string, unknown> | undefined;
 
+/**
+ * MCPセッションクラス
+ * クライアントとのセッションを管理し、ツール、リソース、プロンプトの要求を処理します
+ */
 export class FastMCPSession<T extends FastMCPSessionAuth = FastMCPSessionAuth> extends FastMCPSessionEventEmitter {
   #capabilities: ServerCapabilities = {};
   #clientCapabilities?: ClientCapabilities;
@@ -456,10 +484,18 @@ export class FastMCPSession<T extends FastMCPSessionAuth = FastMCPSessionAuth> e
     }
   }
 
+  /**
+   * リソースをセッションに追加します
+   * @param inputResource 追加するリソース
+   */
   private addResource(inputResource: Resource) {
     this.#resources.push(inputResource);
   }
 
+  /**
+   * リソーステンプレートをセッションに追加します
+   * @param inputResourceTemplate 追加するリソーステンプレート
+   */
   private addResourceTemplate(inputResourceTemplate: InputResourceTemplate) {
     const completers: Record<string, ArgumentValueCompleter> = {};
 
@@ -485,6 +521,10 @@ export class FastMCPSession<T extends FastMCPSessionAuth = FastMCPSessionAuth> e
     this.#resourceTemplates.push(resourceTemplate);
   }
 
+  /**
+   * プロンプトをセッションに追加します
+   * @param inputPrompt 追加するプロンプト
+   */
   private addPrompt(inputPrompt: InputPrompt) {
     const completers: Record<string, ArgumentValueCompleter> = {};
     const enums: Record<string, string[]> = {};
@@ -538,12 +578,20 @@ export class FastMCPSession<T extends FastMCPSessionAuth = FastMCPSessionAuth> e
 
   #pingInterval: ReturnType<typeof setInterval> | null = null;
 
+  /**
+   * AIモデルに対してサンプリング要求を送信します
+   * LLMから回答を生成するために使用します
+   */
   public async requestSampling(
     message: z.infer<typeof CreateMessageRequestSchema>["params"],
   ): Promise<SamplingResponse> {
     return this.#server.createMessage(message);
   }
 
+  /**
+   * トランスポートを使用してサーバーに接続します
+   * @param transport 使用するトランスポート（StdioやSSEなど）
+   */
   public async connect(transport: Transport) {
     if (this.#server.transport) {
       throw new UnexpectedStateError("Server is already connected");
@@ -1031,6 +1079,10 @@ class FastMCPEventEmitter extends FastMCPEventEmitterBase {}
 
 type Authenticate<T> = (request: http.IncomingMessage) => Promise<T>;
 
+/**
+ * FastMCPメインクラス
+ * MCP機能を提供するサーバーを構築するためのメインエントリーポイント
+ */
 export class FastMCP<T extends Record<string, unknown> | undefined = undefined> extends FastMCPEventEmitter {
   #options: ServerOptions<T>;
   #prompts: InputPrompt[] = [];
@@ -1053,21 +1105,24 @@ export class FastMCP<T extends Record<string, unknown> | undefined = undefined> 
   }
 
   /**
-   * Adds a tool to the server.
+   * ツールをサーバーに追加します
+   * AIモデルが呼び出し可能な関数を定義します
    */
   public addTool<Params extends ToolParameters>(tool: Tool<T, Params>) {
     this.#tools.push(tool as unknown as Tool<T>);
   }
 
   /**
-   * Adds a resource to the server.
+   * リソースをサーバーに追加します
+   * AIモデルが読み取り可能なデータを定義します
    */
   public addResource(resource: Resource) {
     this.#resources.push(resource);
   }
 
   /**
-   * Adds a resource template to the server.
+   * リソーステンプレートをサーバーに追加します
+   * パラメータ化されたリソースをAIモデルに提供します
    */
   public addResourceTemplate<
     const Args extends InputResourceTemplateArgument[],
@@ -1076,7 +1131,8 @@ export class FastMCP<T extends Record<string, unknown> | undefined = undefined> 
   }
 
   /**
-   * Adds a prompt to the server.
+   * プロンプトをサーバーに追加します
+   * 再利用可能なプロンプトテンプレートを定義します
    */
   public addPrompt<const Args extends InputPromptArgument[]>(
     prompt: InputPrompt<Args>,
@@ -1085,7 +1141,8 @@ export class FastMCP<T extends Record<string, unknown> | undefined = undefined> 
   }
 
   /**
-   * Starts the server.
+   * サーバーを起動します
+   * 指定されたトランスポート（stdio、SSE）でMCPサーバーを開始します
    */
   public async start(
     options:
@@ -1161,7 +1218,8 @@ export class FastMCP<T extends Record<string, unknown> | undefined = undefined> 
   }
 
   /**
-   * Stops the server.
+   * サーバーを停止します
+   * アクティブなセッションをクリーンアップします
    */
   public async stop() {
     if (this.#sseServer) {
